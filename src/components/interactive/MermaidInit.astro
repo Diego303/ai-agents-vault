@@ -1,0 +1,124 @@
+---
+/**
+ * MermaidInit.astro
+ * Lazy-loads Mermaid.js and initializes diagrams when they enter the viewport.
+ * Respects dark/light mode and inline styles from the vault.
+ */
+---
+
+<script>
+  let mermaidLoaded = false;
+
+  async function loadMermaid(): Promise<any> {
+    if (mermaidLoaded) return (window as any).mermaid;
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    const isDark = document.documentElement.classList.contains('dark');
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: isDark ? 'dark' : 'default',
+      securityLevel: 'loose',
+      fontFamily: 'Inter, sans-serif',
+    });
+    mermaidLoaded = true;
+    (window as any).mermaid = mermaid;
+    return mermaid;
+  }
+
+  async function renderDiagram(wrapper: Element) {
+    const preEl = wrapper.querySelector('pre.mermaid');
+    if (!preEl) return;
+    if (wrapper.getAttribute('data-rendered') === 'true') return;
+
+    const code = preEl.textContent || '';
+    if (!code.trim()) return;
+
+    try {
+      const mermaid = await loadMermaid();
+      const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
+      const { svg } = await mermaid.render(id, code);
+
+      // Replace the pre with rendered SVG
+      const svgContainer = document.createElement('div');
+      svgContainer.className = 'mermaid-rendered';
+      svgContainer.innerHTML = svg;
+      preEl.replaceWith(svgContainer);
+      wrapper.setAttribute('data-rendered', 'true');
+    } catch (err) {
+      console.warn('Mermaid render failed:', err);
+      // Keep the raw code visible as fallback
+      preEl.style.color = '#e06c75';
+      preEl.style.fontSize = '0.8rem';
+    }
+  }
+
+  function initMermaid() {
+    const wrappers = document.querySelectorAll('.mermaid-wrapper');
+    if (wrappers.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            renderDiagram(entry.target);
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: '200px' }
+    );
+
+    wrappers.forEach(w => observer.observe(w));
+  }
+
+  // Re-render on theme change
+  function watchThemeChanges() {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'class') {
+          // Reset mermaid state and re-render
+          mermaidLoaded = false;
+          const rendered = document.querySelectorAll('.mermaid-wrapper[data-rendered="true"]');
+          rendered.forEach(wrapper => {
+            const svgContainer = wrapper.querySelector('.mermaid-rendered');
+            if (svgContainer && wrapper.getAttribute('data-original')) {
+              // We could re-render, but for simplicity just reload on theme change
+            }
+          });
+        }
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  initMermaid();
+  watchThemeChanges();
+  document.addEventListener('astro:page-load', initMermaid);
+</script>
+
+<style is:global>
+  .mermaid-wrapper {
+    margin: 1.5rem 0;
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  .mermaid-wrapper pre.mermaid {
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    text-align: left;
+    font-size: 0.8rem;
+    border: 1px dashed var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+
+  .mermaid-rendered {
+    display: flex;
+    justify-content: center;
+  }
+
+  .mermaid-rendered svg {
+    max-width: 100%;
+    height: auto;
+  }
+</style>

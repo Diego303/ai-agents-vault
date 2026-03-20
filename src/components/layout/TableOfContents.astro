@@ -1,0 +1,123 @@
+---
+/**
+ * TableOfContents.astro
+ * Right sidebar: Table of Contents with scroll spy.
+ */
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+
+// Only show h2 and h3
+const tocItems = headings.filter(h => h.depth >= 2 && h.depth <= 3);
+---
+
+{tocItems.length > 0 && (
+  <div class="toc-container">
+    <div class="toc-header">En esta página</div>
+    <nav class="toc-nav" aria-label="Tabla de contenidos">
+      <ul class="toc-list">
+        {tocItems.map(item => (
+          <li class:list={['toc-item', { 'toc-h3': item.depth === 3 }]}>
+            <a href={`#${item.slug}`} class="toc-link" data-heading={item.slug}>
+              {item.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+)}
+
+<style>
+  .toc-container {
+    position: sticky;
+    top: 2rem;
+    font-family: var(--font-ui);
+  }
+
+  .toc-header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.75rem;
+  }
+
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .toc-item {
+    margin-bottom: 0.1rem;
+  }
+
+  .toc-h3 {
+    padding-left: 0.75rem;
+  }
+
+  .toc-link {
+    display: block;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: color 200ms ease, border-color 200ms ease;
+    line-height: 1.4;
+  }
+
+  .toc-link:hover {
+    color: var(--text-main);
+  }
+
+  .toc-link.active {
+    color: var(--link-color);
+    border-left-color: var(--link-color);
+    font-weight: 500;
+  }
+</style>
+
+<script>
+  // Scroll spy: highlight active heading in ToC
+  function initScrollSpy() {
+    const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
+    if (links.length === 0) return;
+
+    const headingEls = Array.from(links)
+      .map(link => {
+        const id = link.getAttribute('data-heading');
+        return id ? document.getElementById(id) : null;
+      })
+      .filter(Boolean) as HTMLElement[];
+
+    if (headingEls.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            links.forEach(link => {
+              link.classList.toggle('active', link.getAttribute('data-heading') === id);
+            });
+          }
+        }
+      },
+      {
+        rootMargin: '-80px 0px -70% 0px',
+        threshold: 0,
+      }
+    );
+
+    headingEls.forEach(el => observer.observe(el));
+  }
+
+  initScrollSpy();
+</script>

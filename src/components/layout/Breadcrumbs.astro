@@ -1,0 +1,80 @@
+---
+/**
+ * Breadcrumbs.astro
+ * Navigation breadcrumbs using the `up` field from frontmatter
+ * and the folder hierarchy.
+ */
+import { resolveWikilink } from '../../utils/vault-loader';
+
+interface Props {
+  frontmatter: Record<string, any>;
+  currentTitle: string;
+  currentSlug: string;
+}
+
+const { frontmatter, currentTitle, currentSlug } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+// Build breadcrumb trail from folder path
+const parts = currentSlug.split('/');
+const crumbs: { label: string; href: string }[] = [
+  { label: 'Inicio', href: base },
+];
+
+// Add folder breadcrumbs
+if (parts.length > 1) {
+  for (let i = 0; i < parts.length - 1; i++) {
+    const folderName = parts[i];
+    crumbs.push({
+      label: folderName,
+      href: `${base}#${folderName}`,
+    });
+  }
+}
+---
+
+<nav class="breadcrumbs" aria-label="Ruta de navegación">
+  {crumbs.map((crumb, i) => (
+    <Fragment>
+      <a href={crumb.href} class="breadcrumb-link">{crumb.label}</a>
+      <span class="breadcrumb-sep">/</span>
+    </Fragment>
+  ))}
+  <span class="breadcrumb-current">{currentTitle}</span>
+</nav>
+
+<style>
+  .breadcrumbs {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .breadcrumb-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 200ms ease;
+  }
+
+  .breadcrumb-link:hover {
+    color: var(--text-main);
+  }
+
+  .breadcrumb-sep {
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+
+  .breadcrumb-current {
+    color: var(--text-main);
+    font-weight: 500;
+    background: var(--bg-surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.2rem;
+    border: 1px solid var(--border-color);
+  }
+</style>

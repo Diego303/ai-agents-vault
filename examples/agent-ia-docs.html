@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Overview - Academic Vault</title>
+    
+    <!-- Tailwind CSS with JIT Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Mermaid JS -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <style>
+        /* ==========================================
+           1. CSS VARIABLES (Light/Dark Semantics)
+           ========================================== */
+        :root {
+            --border-color: #e5e3db;
+            
+            --link-color: #4338ca;
+            --link-bg: rgba(67, 56, 202, 0.05);
+            --link-border: rgba(67, 56, 202, 0.15);
+
+            /* Callouts Light */
+            --callout-abstract-bg: #f4f7f6;
+            --callout-abstract-border: #7a9e9f;
+            --callout-abstract-text: #4a6b6c;
+            
+            --callout-tip-bg: #fdf8f0;
+            --callout-tip-border: #e5a03e;
+            --callout-tip-text: #b37317;
+            
+            --callout-warning-bg: #fcf3f3;
+            --callout-warning-border: #d9534f;
+            --callout-warning-text: #a94442;
+
+            --callout-info-bg: #f0f4f8;
+            --callout-info-border: #4a90e2;
+            --callout-info-text: #2c5c92;
+        }
+
+        html.dark {
+            --border-color: #2a2a2a;
+            
+            --link-color: #a5b4fc;
+            --link-bg: rgba(99, 102, 241, 0.1);
+            --link-border: rgba(99, 102, 241, 0.25);
+
+            /* Callouts Dark - Desaturated & High Contrast */
+            --callout-abstract-bg: #111a19;
+            --callout-abstract-border: #3f6a62;
+            --callout-abstract-text: #82a8a4;
+            
+            --callout-tip-bg: #1f170b;
+            --callout-tip-border: #9c6c2b;
+            --callout-tip-text: #d4a563;
+            
+            --callout-warning-bg: #211212;
+            --callout-warning-border: #8c3634;
+            --callout-warning-text: #cf6d6b;
+
+            --callout-info-bg: #0f1621;
+            --callout-info-border: #30588c;
+            --callout-info-text: #719ecc;
+        }
+
+        /* ==========================================
+           2. GLOBAL STYLES
+           ========================================== */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d0c9; border-radius: 4px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ==========================================
+           3. UI COMPONENTS
+           ========================================== */
+        /* Wikilink Style */
+        .wikilink {
+            color: var(--link-color);
+            background-color: var(--link-bg);
+            border: 1px solid var(--link-border);
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .wikilink::before { content: "[["; opacity: 0.4; margin-right: 1px; }
+        .wikilink::after { content: "]]"; opacity: 0.4; margin-left: 1px; }
+        .wikilink:hover { background-color: rgba(99, 102, 241, 0.15); }
+
+        /* Highlights */
+        .highlight {
+            background-color: rgba(250, 204, 21, 0.3);
+            padding: 0 0.2rem;
+            border-radius: 0.125rem;
+            font-weight: 500;
+        }
+        html.dark .highlight {
+            background-color: rgba(250, 204, 21, 0.15);
+            color: #fef08a;
+        }
+
+        /* Foldable Details/Summary */
+        details {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        summary {
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid transparent;
+            list-style: none;
+            display: flex;
+            align-items: center;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::before {
+            content: '\f0da';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.75rem;
+            transition: transform 0.2s;
+        }
+        html.dark summary::before { color: #9ca3af; }
+        details[open] summary { border-bottom-color: var(--border-color); }
+        details[open] summary::before { transform: rotate(90deg); }
+
+        /* Callouts */
+        .callout {
+            padding: 1rem 1.25rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            margin-bottom: 1.5rem;
+            border-left-width: 4px;
+        }
+        .callout-title {
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .callout-abstract { background: var(--callout-abstract-bg); border-left-color: var(--callout-abstract-border); }
+        .callout-abstract .callout-title { color: var(--callout-abstract-text); }
+        
+        .callout-tip { background: var(--callout-tip-bg); border-left-color: var(--callout-tip-border); }
+        .callout-tip .callout-title { color: var(--callout-tip-text); }
+        
+        .callout-warning { background: var(--callout-warning-bg); border-left-color: var(--callout-warning-border); }
+        .callout-warning .callout-title { color: var(--callout-warning-text); }
+
+        .callout-info { background: var(--callout-info-bg); border-left-color: var(--callout-info-border); }
+        .callout-info .callout-title { color: var(--callout-info-text); }
+
+        /* Code blocks */
+        pre {
+            background: #1e1e1e !important;
+            color: #d4d4d4 !important;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        html.dark pre { border: 1px solid var(--border-color); background: #111111 !important; }
+        .code-keyword { color: #569cd6; }
+        .code-string { color: #ce9178; }
+        .code-function { color: #dcdcaa; }
+        .code-comment { color: #6a9955; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+        th, td { border: 1px solid var(--border-color); padding: 0.75rem 1rem; text-align: left; }
+        th { font-weight: 600; font-size: 0.875rem; }
+        td { font-size: 0.95rem; }
+
+        /* Mermaid Dark Mode Fixes */
+        html.dark .mermaid .node rect, 
+        html.dark .mermaid .node circle, 
+        html.dark .mermaid .node polygon { 
+            stroke: #4b5563 !important; 
+            fill: #1c1c1c !important; 
+        }
+        html.dark .mermaid .node text { fill: #f3f4f6 !important; }
+        html.dark .mermaid .edgeLabel { background-color: #1c1c1c !important; color: #f3f4f6 !important; }
+        html.dark .mermaid .edgePath path { stroke: #6b7280 !important; }
+        html.dark .mermaid marker path { fill: #6b7280 !important; stroke: none !important; }
+
+        /* ToC Sticky */
+        .toc-container { position: sticky; top: 2rem; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex antialiased bg-[#faf9f8] dark:bg-[#0d0d0d] text-gray-800 dark:text-gray-300 transition-colors duration-200">
+
+    <!-- ========================================== -->
+    <!-- LEFT SIDEBAR                               -->
+    <!-- ========================================== -->
+    <aside class="w-64 bg-[#f2f1ec] dark:bg-[#161616] border-r border-[var(--border-color)] h-full flex flex-col flex-shrink-0 hidden md:flex transition-colors duration-200">
+        <!-- Header -->
+        <div class="p-4 flex items-center justify-between font-semibold text-gray-800 dark:text-white border-b border-[var(--border-color)]">
+            <div class="flex items-center">
+                <i class="fa-solid fa-cube text-indigo-600 dark:text-indigo-400 mr-2"></i>
+                <span>Cerebro Digital</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="theme-toggle-desktop" class="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition" title="Cambiar tema">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <i class="fa-solid fa-angles-left text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer text-xs"></i>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="p-3">
+            <div class="bg-white dark:bg-[#1c1c1c] border border-[var(--border-color)] rounded-md px-3 py-2 flex items-center text-gray-500 shadow-sm cursor-text hover:border-indigo-300 transition">
+                <i class="fa-solid fa-search text-xs mr-2"></i>
+                <span class="text-sm flex-1">Buscar...</span>
+                <span class="text-[10px] border border-gray-200 dark:border-gray-700 px-1 rounded text-gray-400">⌘K</span>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-3 pb-4">
+            <!-- Favorites -->
+            <div class="mb-6">
+                <div class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-2">Favoritos</div>
+                <div class="space-y-0.5 text-sm">
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-house text-gray-400 mr-2 w-4 text-center"></i> Dashboard
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-shield-halved text-gray-400 mr-2 w-4 text-center"></i> OWASP Top 10
+                    </div>
+                </div>
+            </div>
+
+            <!-- Taxonomy -->
+            <div class="mb-6">
+                <div class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-2">Taxonomía</div>
+                <div class="space-y-0.5 text-sm">
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-caret-right text-gray-400 mr-1.5 w-3 text-center"></i> 📁 00-mocs
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-caret-right text-gray-400 mr-1.5 w-3 text-center"></i> 🧠 02-llms
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <i class="fa-solid fa-caret-right text-gray-400 mr-1.5 w-3 text-center"></i> 🤖 03-agentes-ia
+                    </div>
+                    
+                    <!-- Expanded folder -->
+                    <div>
+                        <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-900 dark:text-white font-medium">
+                            <i class="fa-solid fa-caret-down text-gray-600 dark:text-gray-400 mr-1.5 w-3 text-center"></i> 🔎 04-tecnicas-retrieval
+                        </div>
+                        <div class="pl-7 space-y-0.5 mt-0.5 border-l border-gray-300 dark:border-gray-700 ml-3">
+                            <div class="px-2 py-1 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-indigo-700 dark:text-indigo-400 truncate bg-[#e5e3db]/50 dark:bg-[#262626] font-medium">
+                                📄 rag-overview
+                            </div>
+                            <div class="px-2 py-1 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-600 dark:text-gray-400 truncate">
+                                📄 vector-databases
+                            </div>
+                            <div class="px-2 py-1 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-600 dark:text-gray-400 truncate">
+                                📄 chunking-strategies
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ecosystem Custom -->
+            <div>
+                <div class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-2 flex justify-between items-center">
+                    Ecosistema
+                    <i class="fa-solid fa-plus text-[10px] cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"></i>
+                </div>
+                <div class="space-y-0.5 text-sm">
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <span class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center text-[9px] mr-2 font-bold">Ar</span> Architect
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <span class="w-4 h-4 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50 flex items-center justify-center text-[9px] mr-2 font-bold">Vi</span> Vigil
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <span class="w-4 h-4 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 flex items-center justify-center text-[9px] mr-2 font-bold">Li</span> Licit
+                    </div>
+                    <div class="flex items-center px-2 py-1.5 hover:bg-[#e5e3db] dark:hover:bg-[#262626] rounded cursor-pointer transition text-gray-700 dark:text-gray-300">
+                        <span class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 flex items-center justify-center text-[9px] mr-2 font-bold">In</span> Intake
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Graph View Button -->
+        <div class="p-3 border-t border-[var(--border-color)]">
+            <button class="w-full py-2 bg-white dark:bg-[#1c1c1c] border border-gray-300 dark:border-[#333] rounded text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#262626] transition flex items-center justify-center shadow-sm">
+                <i class="fa-solid fa-diagram-project mr-2"></i> Abrir Grafo
+            </button>
+        </div>
+    </aside>
+
+    <!-- ========================================== -->
+    <!-- MAIN CONTENT AREA                          -->
+    <!-- ========================================== -->
+    <main class="flex-1 overflow-y-auto relative scroll-smooth" id="main-scroll">
+        
+        <!-- Mobile Header -->
+        <div class="md:hidden flex items-center justify-between p-4 border-b border-[var(--border-color)] bg-[#faf9f8] dark:bg-[#0d0d0d] sticky top-0 z-20">
+            <i class="fa-solid fa-bars text-gray-600 dark:text-gray-400 text-xl cursor-pointer"></i>
+            <span class="font-semibold text-sm text-gray-800 dark:text-gray-200">rag-overview.md</span>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle-mobile" class="text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <i class="fa-solid fa-search text-gray-600 dark:text-gray-400 cursor-pointer"></i>
+            </div>
+        </div>
+
+        <div class="max-w-6xl mx-auto flex flex-col xl:flex-row gap-8 px-6 py-10 md:px-12 md:py-16">
+            
+            <!-- Article Content -->
+            <article class="flex-1 max-w-3xl min-w-0">
+                
+                <!-- Breadcrumbs -->
+                <div class="font-inter text-xs text-gray-400 dark:text-gray-500 mb-8 flex items-center space-x-2">
+                    <span class="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition">Cerebro Digital</span>
+                    <span>/</span>
+                    <span class="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition">04-tecnicas-retrieval</span>
+                    <span>/</span>
+                    <span class="text-gray-800 dark:text-gray-200 font-medium bg-gray-100 dark:bg-[#1c1c1c] px-1.5 rounded border border-transparent dark:border-[var(--border-color)]">rag-overview.md</span>
+                </div>
+
+                <!-- Title (Pure White in Dark Mode) -->
+                <h1 class="text-4xl md:text-5xl font-bold mb-8 text-[#1a1a1a] dark:text-white leading-tight tracking-tight font-serif">
+                    RAG — Retrieval-Augmented Generation
+                </h1>
+
+                <!-- Frontmatter Data Block -->
+                <div class="border border-[var(--border-color)] bg-white dark:bg-[#161616] rounded-lg p-5 mb-10 text-sm shadow-sm transition-colors">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                        <!-- Tags -->
+                        <div class="flex">
+                            <span class="w-24 text-gray-400 dark:text-gray-500 font-semibold uppercase text-[10px] tracking-wider mt-1">Tags</span>
+                            <div class="flex-1 flex flex-wrap gap-1.5">
+                                <span class="bg-[#f0eee9] dark:bg-[#262626] text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs border border-[var(--border-color)] hover:bg-gray-200 dark:hover:bg-[#333] cursor-pointer transition">#concepto</span>
+                                <span class="bg-[#f0eee9] dark:bg-[#262626] text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs border border-[var(--border-color)] hover:bg-gray-200 dark:hover:bg-[#333] cursor-pointer transition">#retrieval</span>
+                                <span class="bg-[#f0eee9] dark:bg-[#262626] text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs border border-[var(--border-color)] hover:bg-gray-200 dark:hover:bg-[#333] cursor-pointer transition">#llm</span>
+                            </div>
+                        </div>
+                        <!-- Aliases -->
+                        <div class="flex">
+                            <span class="w-24 text-gray-400 dark:text-gray-500 font-semibold uppercase text-[10px] tracking-wider mt-1">Aliases</span>
+                            <div class="flex-1 text-gray-700 dark:text-gray-300">
+                                RAG, Generación Aumentada por Recuperación
+                            </div>
+                        </div>
+                        <!-- Status & Difficulty -->
+                        <div class="flex">
+                            <span class="w-24 text-gray-400 dark:text-gray-500 font-semibold uppercase text-[10px] tracking-wider mt-1">Status</span>
+                            <div class="flex-1 flex items-center gap-4 text-gray-700 dark:text-gray-300">
+                                <span class="flex items-center"><i class="fa-solid fa-circle text-green-500 dark:text-green-400 text-[8px] mr-1.5"></i> complete</span>
+                                <span class="flex items-center text-gray-500 dark:text-gray-400"><i class="fa-solid fa-layer-group text-[10px] mr-1.5"></i> intermediate</span>
+                            </div>
+                        </div>
+                        <!-- Related Notes -->
+                        <div class="flex">
+                            <span class="w-24 text-gray-400 dark:text-gray-500 font-semibold uppercase text-[10px] tracking-wider mt-1">Related</span>
+                            <div class="flex-1 flex flex-wrap gap-1.5">
+                                <a href="#" class="wikilink">embeddings</a>
+                                <a href="#" class="wikilink">vector-databases</a>
+                                <a href="#" class="wikilink">chunking-strategies</a>
+                            </div>
+                        </div>
+                        <!-- Up (MOC Padre) -->
+                        <div class="flex col-span-1 md:col-span-2 border-t border-[var(--border-color)] pt-3 mt-1">
+                            <span class="w-24 text-gray-400 dark:text-gray-500 font-semibold uppercase text-[10px] tracking-wider mt-1">Up (MOC)</span>
+                            <div class="flex-1">
+                                <a href="#" class="wikilink font-bold">moc-rag-retrieval</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abstract Callout -->
+                <div class="callout callout-abstract">
+                    <div class="callout-title"><i class="fa-solid fa-align-left mr-2"></i> Resumen</div>
+                    <p class="text-[15px] leading-relaxed italic m-0 text-gray-700 dark:text-gray-300">
+                        RAG es una arquitectura que combina la recuperación de información (<em>retrieval</em>) con la generación de texto de un LLM, permitiendo respuestas fundamentadas en datos reales y reduciendo <span class="highlight">alucinaciones en un 40-60%</span> según estudios recientes<sup class="text-[10px] ml-0.5 cursor-pointer text-indigo-600 dark:text-indigo-400 hover:underline">[1]</sup>. <span class="text-xs text-gray-400 dark:text-gray-500 ml-2 font-mono">^resumen-rag</span>
+                    </p>
+                </div>
+
+                <!-- Content Sections -->
+                <div class="text-[1.05rem] leading-[1.8] space-y-6">
+                    
+                    <h2 id="que-es" class="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-12 mb-4 pb-2 border-b border-[var(--border-color)] font-serif scroll-mt-24 transition-colors">
+                        1. Qué es y por qué importa
+                    </h2>
+                    <p>
+                        <strong>RAG</strong> (<em>Retrieval-Augmented Generation</em>) fue introducido por Meta AI en 2020 como respuesta al problema fundamental de los LLMs: generan texto fluido pero <span class="highlight">no pueden acceder a información actualizada ni verificar sus propias afirmaciones</span>.
+                    </p>
+                    <p>
+                        El concepto es simple: antes de que el LLM genere una respuesta, <strong>buscamos información relevante</strong> en una base de conocimiento y la inyectamos en el prompt como contexto.
+                    </p>
+
+                    <div class="callout callout-tip">
+                        <div class="callout-title"><i class="fa-solid fa-lightbulb mr-2"></i> Cuándo usar RAG vs Fine-tuning</div>
+                        <ul class="list-disc pl-5 m-0 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                            <li><strong>RAG</strong>: Cuando necesitas datos actualizados, fuentes verificables, o el conocimiento cambia frecuentemente.</li>
+                            <li><strong>Fine-tuning</strong>: Cuando necesitas cambiar el <em>comportamiento</em> o <em>estilo</em> del modelo.</li>
+                            <li><strong>Ambos</strong>: Se pueden combinar. Ver <a href="#" class="wikilink">rag-vs-fine-tuning</a> para un análisis detallado.</li>
+                        </ul>
+                    </div>
+
+                    <h2 id="arquitectura" class="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-12 mb-4 pb-2 border-b border-[var(--border-color)] font-serif scroll-mt-24 transition-colors">
+                        2. Arquitectura
+                    </h2>
+                    
+                    <!-- Foldable Diagram -->
+                    <details open class="bg-white dark:bg-[#161616] transition-colors">
+                        <summary class="bg-[#fbfbfd] dark:bg-[#1c1c1c] text-gray-800 dark:text-gray-200 transition-colors">Ver diagrama de arquitectura completo</summary>
+                        <div class="details-content flex justify-center py-4">
+                            <!-- Mermaid Diagram Initialization -->
+                            <div class="mermaid">
+                                flowchart TD
+                                    A[Query del usuario] --> B[Embedding de la query]
+                                    B --> C[Búsqueda vectorial]
+                                    C --> D[Documentos relevantes]
+                                    D --> E[Reranking]
+                                    E --> F[Prompt con contexto]
+                                    F --> G[LLM genera respuesta]
+                                    G --> H[Respuesta fundamentada]
+                                    
+                                    style A fill:#f9f,stroke:#333,stroke-width:2px
+                                    style H fill:#bbf,stroke:#333,stroke-width:2px
+                                    style C fill:#dfd,stroke:#333
+                            </div>
+                        </div>
+                    </details>
+
+                    <p>
+                        El pipeline consta de dos fases principales que se detallan en <a href="#" class="wikilink">rag-pipeline-completo</a>:
+                    </p>
+                    <ol class="list-decimal pl-6 space-y-2">
+                        <li><strong>Indexación (offline)</strong>: Documentos → <a href="#" class="wikilink">chunking-strategies|chunks</a> → <a href="#" class="wikilink">embeddings</a> → <a href="#" class="wikilink">vector-databases|base vectorial</a>.</li>
+                        <li><strong>Recuperación + Generación (online)</strong>: Query → retrieval → reranking → generación.</li>
+                    </ol>
+
+                    <h2 id="implementacion" class="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-12 mb-4 pb-2 border-b border-[var(--border-color)] font-serif scroll-mt-24 transition-colors">
+                        3. Implementación básica
+                    </h2>
+                    
+                    <!-- Foldable Code -->
+                    <details class="bg-white dark:bg-[#161616] transition-colors">
+                        <summary class="bg-[#fbfbfd] dark:bg-[#1c1c1c] text-gray-800 dark:text-gray-200 transition-colors">Ver implementación en Python con LangChain</summary>
+                        <div class="details-content p-0 bg-[#1e1e1e] dark:bg-black">
+<pre class="m-0 border-none rounded-none"><code class="font-mono"><span class="code-keyword">from</span> langchain.embeddings <span class="code-keyword">import</span> OpenAIEmbeddings
+<span class="code-keyword">from</span> langchain.vectorstores <span class="code-keyword">import</span> Chroma
+<span class="code-keyword">from</span> langchain.chains <span class="code-keyword">import</span> RetrievalQA
+<span class="code-keyword">from</span> langchain.llms <span class="code-keyword">import</span> ChatOpenAI
+
+<span class="code-comment"># Indexación</span>
+embeddings = OpenAIEmbeddings()
+vectorstore = Chroma.from_documents(documents, embeddings)
+
+<span class="code-comment"># Retrieval + Generation</span>
+qa_chain = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(model=<span class="code-string">"gpt-4"</span>),
+    retriever=vectorstore.as_retriever(search_kwargs={<span class="code-string">"k"</span>: <span class="code-number">5</span>}),
+    return_source_documents=<span class="code-keyword">True</span>
+)
+result = qa_chain.invoke({<span class="code-string">"query"</span>: <span class="code-string">"¿Cómo funciona RAG?"</span>})</code></pre>
+                        </div>
+                    </details>
+
+                    <h2 id="variantes" class="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-12 mb-4 pb-2 border-b border-[var(--border-color)] font-serif scroll-mt-24 transition-colors">
+                        4. Variantes avanzadas
+                    </h2>
+
+                    <div class="overflow-x-auto rounded-lg border border-[var(--border-color)] mb-6 transition-colors">
+                        <table class="m-0 bg-white dark:bg-[#161616]">
+                            <thead class="bg-[#fbfbfb] dark:bg-[#212121] text-gray-600 dark:text-gray-300">
+                                <tr>
+                                    <th>Variante</th>
+                                    <th>Descripción</th>
+                                    <th>Cuándo usar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-gray-800 dark:text-gray-300">
+                                <tr>
+                                    <td class="font-medium text-indigo-700 dark:text-indigo-400">Corrective RAG (CRAG)</td>
+                                    <td>Evalúa relevancia del contexto recuperado antes de generar.</td>
+                                    <td>Cuando la calidad del retrieval es variable.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Self-RAG</td>
+                                    <td>El LLM decide dinámicamente si necesita retrieval o no.</td>
+                                    <td>Queries mixtas (algunas necesitan contexto externo, otras no).</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Agentic RAG</td>
+                                    <td>Un agente orquesta múltiples retrievals con herramientas.</td>
+                                    <td>Queries complejas <em>multi-hop</em> que requieren razonamiento.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium"><a href="#" class="wikilink">Graph RAG</a></td>
+                                    <td>Usa bases de datos de grafos (Knowledge Graphs).</td>
+                                    <td>Extracción de relaciones complejas entre entidades.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="callout callout-warning">
+                        <div class="callout-title"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Limitación crítica</div>
+                        <p class="m-0 text-sm text-gray-800 dark:text-gray-300">RAG no soluciona el problema de razonamiento. Si el LLM no puede razonar correctamente sobre el contexto recuperado, la respuesta seguirá siendo incorrecta aunque los documentos sean perfectos. Ver <a href="#" class="wikilink">razonamiento-llm</a> para más contexto.</p>
+                    </div>
+
+                    <h2 id="ecosistema" class="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-12 mb-4 pb-2 border-b border-[var(--border-color)] font-serif scroll-mt-24 transition-colors">
+                        5. Relación con el ecosistema
+                    </h2>
+
+                    <div class="callout callout-info">
+                        <div class="callout-title"><i class="fa-solid fa-link mr-2"></i> Conexiones con herramientas core</div>
+                        <ul class="list-none space-y-3 m-0 text-sm mt-2 text-gray-800 dark:text-gray-300">
+                            <li class="flex items-start">
+                                <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-[10px] font-bold mr-2 mt-0.5 border border-transparent dark:border-blue-800/50">Ar</span>
+                                <span>La <a href="#" class="wikilink">architect-ralph-loop|memoria procedural de architect</a> es conceptualmente similar al retrieval de RAG.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold mr-2 mt-0.5 border border-transparent dark:border-purple-800/50">In</span>
+                                <span><a href="#" class="wikilink">intake</a> usa RAG internamente para enriquecer las especificaciones con documentación existente del repositorio.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded text-[10px] font-bold mr-2 mt-0.5 border border-transparent dark:border-green-800/50">Li</span>
+                                <span>La trazabilidad obligatoria de fuentes en RAG conecta directamente con los requisitos del <a href="#" class="wikilink">eu-ai-act-completo</a> gestionados por Licit.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <hr class="border-[var(--border-color)] my-12 transition-colors">
+
+                    <!-- Footnotes Section -->
+                    <div class="text-sm font-sans bg-white dark:bg-[#161616] p-6 rounded-lg border border-[var(--border-color)] shadow-sm transition-colors text-gray-600 dark:text-gray-400">
+                        <h4 class="font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider text-xs">Referencias y Citas</h4>
+                        <ol class="list-decimal pl-4 space-y-2">
+                            <li id="fn-1">Shuster et al., "Retrieval Augmentation Reduces Hallucination in Conversation", 2021. <a href="#" class="text-indigo-600 dark:text-indigo-400 hover:underline">🔗 Link</a></li>
+                            <li id="fn-2">Paper original: Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", NeurIPS 2020.</li>
+                            <li id="fn-3">Gao et al., "Retrieval-Augmented Generation for Large Language Models: A Survey", 2024.</li>
+                        </ol>
+                    </div>
+
+                </div>
+            </article>
+
+            <!-- ========================================== -->
+            <!-- RIGHT SIDEBAR: TABLE OF CONTENTS           -->
+            <!-- ========================================== -->
+            <aside class="hidden xl:block w-64 flex-shrink-0">
+                <div class="toc-container">
+                    <div class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">On this page</div>
+                    <nav class="space-y-1 text-sm text-gray-600 dark:text-gray-400 border-l-2 border-[var(--border-color)] transition-colors">
+                        <a href="#que-es" class="block pl-3 py-1.5 border-l-2 border-transparent hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 transition">1. Qué es y por qué importa</a>
+                        <a href="#arquitectura" class="block pl-3 py-1.5 border-l-2 border-transparent hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 transition">2. Arquitectura</a>
+                        <a href="#implementacion" class="block pl-3 py-1.5 border-l-2 border-transparent hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 transition">3. Implementación básica</a>
+                        <a href="#variantes" class="block pl-3 py-1.5 border-l-2 border-transparent hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 transition">4. Variantes avanzadas</a>
+                        <a href="#ecosistema" class="block pl-3 py-1.5 border-l-2 border-transparent hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-400 transition">5. Relación con ecosistema</a>
+                    </nav>
+
+                    <!-- Embedded Graph preview (Academic touch) -->
+                    <div class="mt-10">
+                        <div class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Local Graph</div>
+                        <div class="bg-white dark:bg-[#1c1c1c] border border-[var(--border-color)] h-32 rounded-lg flex items-center justify-center p-2 relative shadow-sm overflow-hidden group cursor-pointer transition-colors">
+                            <i class="fa-solid fa-share-nodes text-gray-300 dark:text-gray-600 text-4xl group-hover:scale-110 transition duration-300"></i>
+                            <div class="absolute inset-0 bg-indigo-600/5 dark:bg-indigo-400/10 opacity-0 group-hover:opacity-100 transition"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- UI Logic -->
+    <script>
+        // Init Mermaid with a neutral theme that CSS can easily override
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#f4f7f6',
+                primaryTextColor: '#1a1a1a',
+                primaryBorderColor: '#7a9e9f',
+                lineColor: '#9ca3af',
+                secondaryColor: '#fdf8f0',
+                tertiaryColor: '#fff'
+            }
+        });
+        
+        // Simple ToC active state script
+        const mainScroll = document.getElementById('main-scroll');
+        const sections = document.querySelectorAll('h2[id]');
+        const navLinks = document.querySelectorAll('.toc-container nav a');
+
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'border-indigo-600', 'dark:border-indigo-400', 'font-medium');
+                link.classList.add('border-transparent');
+                if (link.getAttribute('href').substring(1) === current) {
+                    link.classList.remove('border-transparent');
+                    link.classList.add('text-indigo-600', 'dark:text-indigo-400', 'border-indigo-600', 'dark:border-indigo-400', 'font-medium');
+                }
+            });
+        });
+
+        // Theme Toggle Logic
+        const themeToggleDesktop = document.getElementById('theme-toggle-desktop');
+        const themeToggleMobile = document.getElementById('theme-toggle-mobile');
+        const htmlElement = document.documentElement;
+
+        function updateIcons(isDark) {
+            const iconClass = isDark ? 'fa-sun' : 'fa-moon';
+            const removeClass = isDark ? 'fa-moon' : 'fa-sun';
+            
+            themeToggleDesktop.querySelector('i').classList.remove(removeClass);
+            themeToggleDesktop.querySelector('i').classList.add(iconClass);
+            
+            themeToggleMobile.querySelector('i').classList.remove(removeClass);
+            themeToggleMobile.querySelector('i').classList.add(iconClass);
+        }
+
+        function toggleTheme() {
+            htmlElement.classList.toggle('dark');
+            const isDark = htmlElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateIcons(isDark);
+        }
+
+        themeToggleDesktop.addEventListener('click', toggleTheme);
+        themeToggleMobile.addEventListener('click', toggleTheme);
+
+        // Check initial theme on load
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+            updateIcons(true);
+        } else {
+            htmlElement.classList.remove('dark');
+            updateIcons(false);
+        }
+    </script>
+</body>
+</html>

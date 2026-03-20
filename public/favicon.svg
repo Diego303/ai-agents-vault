@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <style>
+    .brain { stroke: #4338ca; stroke-width: 1.5; fill: none; }
+    @media (prefers-color-scheme: dark) { .brain { stroke: #a5b4fc; } }
+  </style>
+  <!-- Left hemisphere -->
+  <path class="brain" d="M7.5 18C4.5 18 3 15.5 3 13c0-1.8.8-3.4 2-4.4C5 6.5 6.3 5 8.5 5c.7 0 1.4.2 2 .5C11 4 12 3.5 12 3.5"/>
+  <!-- Right hemisphere -->
+  <path class="brain" d="M16.5 18c3 0 4.5-2.5 4.5-5 0-1.8-.8-3.4-2-4.4C19 6.5 17.7 5 15.5 5c-.7 0-1.4.2-2 .5C13 4 12 3.5 12 3.5"/>
+  <!-- Center line -->
+  <path class="brain" d="M12 3.5V20"/>
+  <!-- Brain folds -->
+  <path class="brain" d="M5 10c2 0 3.5 1 4.5 2.5"/>
+  <path class="brain" d="M19 10c-2 0-3.5 1-4.5 2.5"/>
+  <path class="brain" d="M8 15c1.5-.5 2.5-1 4-1"/>
+  <path class="brain" d="M16 15c-1.5-.5-2.5-1-4-1"/>
+  <!-- Stem -->
+  <path class="brain" d="M10 20h4"/>
+</svg>

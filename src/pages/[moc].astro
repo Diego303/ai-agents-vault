@@ -1,0 +1,253 @@
+---
+/**
+ * [moc].astro
+ * Virtual MOC (Map of Content) pages.
+ * Generates pages for each MOC showing notes from the mapped folder.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Sidebar from '../components/layout/Sidebar.astro';
+import ThemeToggle from '../components/interactive/ThemeToggle.astro';
+import SearchModal from '../components/search/SearchModal.astro';
+import { getCollection } from 'astro:content';
+import { MOC_MAP } from '../utils/moc-mapping';
+import { normalizeStatus, normalizeDifficulty } from '../utils/frontmatter';
+
+export async function getStaticPaths() {
+  const allNotes = await getCollection('vault');
+
+  return MOC_MAP.map(moc => {
+    const notes = allNotes.filter(n => n.id.startsWith(moc.folder + '/'));
+    return {
+      params: { moc: moc.slug },
+      props: { moc, notes },
+    };
+  });
+}
+
+const { moc, notes } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+// Pre-compute card data in frontmatter to keep the template clean
+interface CardData {
+  slug: string;
+  title: string;
+  preview: string;
+  statusColor: string;
+  statusLabel: string;
+  statusFilled: boolean;
+  difficultyColor: string;
+  difficultyLabel: string;
+  tags: string[];
+}
+
+const cards: CardData[] = notes.map((note: any) => {
+  const slug = note.id.replace(/\.md$/, '');
+  const filename = slug.split('/').pop() || slug;
+  const title = note.data.title || filename.replace(/-/g, ' ');
+  const status = normalizeStatus(note.data.status);
+  const difficulty = normalizeDifficulty(note.data.difficulty);
+  const tags = (note.data.tags || []).slice(0, 4);
+
+  let preview = '';
+  if (note.body) {
+    for (const line of note.body.split('\n')) {
+      const t = line.trim();
+      if (t && !t.startsWith('#') && !t.startsWith('>') && !t.startsWith('---') && !t.startsWith('```')) {
+        preview = t
+          .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_m: string, _t: string, a: string) => a || _t)
+          .replace(/[=*_~`[\]#]/g, '')
+          .slice(0, 120);
+        if (preview.length >= 120) preview += '…';
+        break;
+      }
+    }
+  }
+
+  return {
+    slug,
+    title,
+    preview,
+    statusColor: status?.color || '',
+    statusLabel: status?.label || '',
+    statusFilled: status?.filled || false,
+    difficultyColor: difficulty?.color || '',
+    difficultyLabel: difficulty?.label || '',
+    tags,
+  };
+});
+---
+
+<BaseLayout title={moc.title} description={moc.description}>
+  <div class="moc-layout">
+    <aside class="moc-sidebar" id="sidebar-left">
+      <Sidebar currentSlug={moc.slug} />
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <header class="moc-mobile-header">
+      <button class="hamburger-btn" id="sidebar-toggle" aria-label="Abrir menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <span class="moc-mobile-title">{moc.title}</span>
+      <ThemeToggle />
+    </header>
+
+    <main class="moc-main">
+      <div class="moc-content">
+        <div class="moc-header-bar">
+          <div>
+            <a href={base} class="moc-back">&larr; Inicio</a>
+            <h1 class="moc-title">{moc.title}</h1>
+            <p class="moc-description">{moc.description}</p>
+            <p class="moc-count">{cards.length} notas</p>
+          </div>
+          <div class="moc-desktop-toggle">
+            <ThemeToggle />
+          </div>
+        </div>
+
+        {cards.length > 0 ? (
+          <div class="note-cards">
+            {cards.map(card => (
+              <a href={`${base}${card.slug}/`} class="note-card">
+                <div class="note-card-header">
+                  <span class="note-card-title">{card.title}</span>
+                  {card.difficultyLabel && (
+                    <span class={`note-card-difficulty difficulty-${card.difficultyColor}`}>
+                      {card.difficultyLabel}
+                    </span>
+                  )}
+                </div>
+                {card.preview && <p class="note-card-preview">{card.preview}</p>}
+                <div class="note-card-footer">
+                  {card.statusLabel && (
+                    <span class={`note-card-status status-${card.statusColor}`}>
+                      <span class={card.statusFilled ? 'dot filled' : 'dot'}></span>
+                      {card.statusLabel}
+                    </span>
+                  )}
+                  <div class="note-card-tags">
+                    {card.tags.map(tag => (
+                      <span class="note-card-tag">#{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="moc-empty">
+            <p>Esta área aún no tiene notas.</p>
+          </div>
+        )}
+      </div>
+    </main>
+
+    <SearchModal />
+  </div>
+</BaseLayout>
+
+<style>
+  .moc-layout { display: flex; min-height: 100vh; }
+
+  .moc-sidebar {
+    width: var(--sidebar-width); flex-shrink: 0; height: 100vh;
+    position: fixed; left: 0; top: 0; overflow-y: auto;
+    background: var(--bg-sidebar); border-right: 1px solid var(--border-color);
+    z-index: 40; transform: translateX(-100%); transition: transform 300ms ease;
+  }
+  .moc-sidebar.open { transform: translateX(0); }
+
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
+  .sidebar-overlay.open { display: block; }
+
+  .moc-mobile-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color);
+    background: var(--bg-main); position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+  }
+  .moc-mobile-title { font-family: var(--font-ui); font-size: 0.875rem; font-weight: 500; }
+  .hamburger-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.25rem; }
+
+  .moc-main { flex: 1; overflow-y: auto; height: 100vh; padding-top: 3.5rem; }
+  .moc-content { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .moc-header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+  .moc-desktop-toggle { display: none; }
+
+  .moc-back { font-family: var(--font-ui); font-size: 0.78rem; color: var(--text-muted); text-decoration: none; }
+  .moc-back:hover { color: var(--link-color); }
+
+  .moc-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; margin: 0.35rem 0 0.25rem; }
+  .moc-description { color: var(--text-muted); font-family: var(--font-body); font-size: 0.95rem; margin-bottom: 0.25rem; }
+  .moc-count { color: var(--text-muted); font-family: var(--font-ui); font-size: 0.78rem; }
+
+  .note-cards { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+
+  .note-card {
+    display: block; padding: 1rem 1.25rem;
+    background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 0.5rem;
+    text-decoration: none; transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  }
+  .note-card:hover { border-color: var(--link-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transform: translateY(-1px); }
+  html.dark .note-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+  .note-card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .note-card-title { font-family: var(--font-ui); font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+
+  .note-card-difficulty { font-family: var(--font-ui); font-size: 0.65rem; font-weight: 500; flex-shrink: 0; }
+  .difficulty-green { color: #15803d; }
+  .difficulty-blue { color: #1d4ed8; }
+  .difficulty-orange { color: #c45100; }
+  .difficulty-red { color: #b91c1c; }
+  html.dark .difficulty-green { color: #4ade80; }
+  html.dark .difficulty-blue { color: #60a5fa; }
+  html.dark .difficulty-orange { color: #fb923c; }
+  html.dark .difficulty-red { color: #f87171; }
+
+  .note-card-preview { font-family: var(--font-body); font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem; }
+
+  .note-card-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+
+  .note-card-status { font-family: var(--font-ui); font-size: 0.7rem; display: flex; align-items: center; gap: 0.25rem; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; display: inline-block; }
+  .dot.filled { background: currentColor; }
+  .status-green { color: #15803d; }
+  .status-blue { color: #1d4ed8; }
+  .status-orange { color: #c45100; }
+  .status-red { color: #b91c1c; }
+  .status-gray { color: #6b7280; }
+  html.dark .status-green { color: #4ade80; }
+  html.dark .status-blue { color: #60a5fa; }
+  html.dark .status-orange { color: #fb923c; }
+  html.dark .status-red { color: #f87171; }
+  html.dark .status-gray { color: #9ca3af; }
+
+  .note-card-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end; }
+  .note-card-tag { font-family: var(--font-ui); font-size: 0.65rem; color: var(--text-muted); }
+
+  .moc-empty { text-align: center; padding: 3rem; color: var(--text-muted); font-family: var(--font-ui); }
+
+  @media (min-width: 640px) { .note-cards { grid-template-columns: repeat(2, 1fr); } }
+
+  @media (min-width: 768px) {
+    .moc-mobile-header { display: none; }
+    .moc-sidebar { transform: translateX(0); position: sticky; top: 0; }
+    .moc-main { padding-top: 0; }
+    .moc-content { padding: 3rem 2rem 4rem; }
+    .moc-desktop-toggle { display: block; }
+  }
+</style>
+
+<script>
+  const toggle = document.getElementById('sidebar-toggle');
+  const sidebar = document.getElementById('sidebar-left');
+  const overlay = document.getElementById('sidebar-overlay');
+  toggle?.addEventListener('click', () => { sidebar?.classList.add('open'); overlay?.classList.add('open'); });
+  overlay?.addEventListener('click', () => { sidebar?.classList.remove('open'); overlay?.classList.remove('open'); });
+</script>

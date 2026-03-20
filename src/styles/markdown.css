@@ -1,0 +1,306 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MARKDOWN — Styles for rendered markdown content
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Prose container ───────────────────────────────────────────── */
+.prose {
+  max-width: var(--content-max-width);
+  color: var(--text-main);
+}
+
+.prose > * + * {
+  margin-top: 1.25rem;
+}
+
+/* ─── Paragraphs ────────────────────────────────────────────────── */
+.prose p {
+  margin-bottom: 1rem;
+  line-height: 1.8;
+}
+
+/* ─── Links ─────────────────────────────────────────────────────── */
+.prose a:not(.wikilink):not(.tag-pill):not(.embed-link) {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 200ms ease;
+}
+
+.prose a:not(.wikilink):not(.tag-pill):not(.embed-link):hover {
+  opacity: 0.8;
+}
+
+/* ─── Wikilinks ─────────────────────────────────────────────────── */
+.wikilink {
+  color: var(--link-color);
+  background-color: var(--link-bg);
+  border: 1px solid var(--link-border);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+  text-decoration: none;
+}
+
+.wikilink:hover {
+  background-color: var(--link-hover-bg);
+}
+
+.wikilink-broken {
+  color: var(--text-muted);
+  border-style: dashed;
+  cursor: help;
+}
+
+/* ─── Highlights ────────────────────────────────────────────────── */
+.highlight, mark.highlight {
+  background-color: var(--highlight-bg);
+  color: var(--highlight-text);
+  padding: 0.05em 0.2rem;
+  border-radius: 0.125rem;
+}
+
+/* ─── Inline code ───────────────────────────────────────────────── */
+.prose code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  font-variant-ligatures: common-ligatures;
+}
+
+/* ─── Code blocks (always dark) ─────────────────────────────────── */
+.prose pre {
+  background: var(--code-block-bg) !important;
+  color: #d4d4d4 !important;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 1.5rem 0;
+  position: relative;
+}
+
+html.dark .prose pre {
+  border: 1px solid var(--border-color);
+}
+
+.prose pre code {
+  background: none !important;
+  color: inherit !important;
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* ─── Copy button for code blocks ───────────────────────────────── */
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.25rem;
+  color: #9ca3af;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 200ms ease, background-color 200ms ease;
+}
+
+.code-block-wrapper:hover .code-copy-btn {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #e5e5e5;
+}
+
+/* ─── Tables ────────────────────────────────────────────────────── */
+.prose .table-wrapper {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.prose th {
+  background: var(--table-header-bg);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.prose tr:nth-child(even) td {
+  background: var(--bg-surface);
+}
+
+/* ─── Lists ─────────────────────────────────────────────────────── */
+.prose ul,
+.prose ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose li {
+  margin-bottom: 0.35rem;
+}
+
+.prose li > p {
+  margin-bottom: 0.5rem;
+}
+
+.prose ul ul,
+.prose ol ol,
+.prose ul ol,
+.prose ol ul {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+/* ─── Blockquotes (non-callout) ─────────────────────────────────── */
+.prose blockquote:not(.callout) {
+  border-left: 4px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  margin: 1.5rem 0;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.prose blockquote:not(.callout) p {
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Horizontal rules ──────────────────────────────────────────── */
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2.5rem 0;
+}
+
+/* ─── Images ────────────────────────────────────────────────────── */
+.prose img {
+  border-radius: 0.5rem;
+  margin: 1.5rem auto;
+}
+
+/* ─── Footnotes ─────────────────────────────────────────────────── */
+.prose .footnotes {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.prose .footnotes ol {
+  padding-left: 1.25rem;
+}
+
+.prose sup a {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ─── Strikethrough ─────────────────────────────────────────────── */
+.prose del {
+  opacity: 0.6;
+}
+
+/* ─── Embed references ──────────────────────────────────────────── */
+.embed-ref {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: var(--bg-surface);
+}
+
+.embed-link {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.embed-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Tag pills ─────────────────────────────────────────────────── */
+.tag-pill {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: background-color 200ms ease;
+  white-space: nowrap;
+}
+
+.tag-pill:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-main);
+}
+
+/* ─── Strong / Emphasis ─────────────────────────────────────────── */
+.prose strong {
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+/* ─── Mermaid diagrams ──────────────────────────────────────────── */
+.mermaid {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+/* Mermaid dark mode — only for nodes without inline styles */
+html.dark .mermaid .node rect:not([style*="fill"]),
+html.dark .mermaid .node circle:not([style*="fill"]),
+html.dark .mermaid .node polygon:not([style*="fill"]) {
+  stroke: #4b5563 !important;
+  fill: #1c1c1c !important;
+}
+html.dark .mermaid .node text { fill: #f3f4f6 !important; }
+html.dark .mermaid .edgeLabel { background-color: #1c1c1c !important; color: #f3f4f6 !important; }
+html.dark .mermaid .edgePath path { stroke: #6b7280 !important; }
+html.dark .mermaid marker path { fill: #6b7280 !important; stroke: none !important; }
+
+/* ─── KaTeX math ────────────────────────────────────────────────── */
+html.dark .katex {
+  color: var(--text-main);
+}

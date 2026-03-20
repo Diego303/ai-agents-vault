@@ -1,0 +1,48 @@
+---
+/**
+ * CodeCopyButton.astro
+ * Adds copy buttons to all code blocks.
+ * Include this component once in the layout.
+ */
+---
+
+<script>
+  function initCopyButtons() {
+    const codeBlocks = document.querySelectorAll('pre:not(.mermaid)');
+
+    codeBlocks.forEach(pre => {
+      // Skip if already wrapped
+      if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
+
+      // Wrap in a container
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper';
+      pre.parentNode?.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+
+      // Create copy button
+      const btn = document.createElement('button');
+      btn.className = 'code-copy-btn';
+      btn.textContent = 'Copiar';
+      btn.setAttribute('aria-label', 'Copiar código');
+
+      btn.addEventListener('click', async () => {
+        const code = pre.querySelector('code')?.textContent || pre.textContent || '';
+        try {
+          await navigator.clipboard.writeText(code);
+          btn.textContent = '✓ Copiado';
+          setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+        } catch {
+          btn.textContent = 'Error';
+          setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+        }
+      });
+
+      wrapper.appendChild(btn);
+    });
+  }
+
+  // Run on page load and after view transitions
+  initCopyButtons();
+  document.addEventListener('astro:page-load', initCopyButtons);
+</script>

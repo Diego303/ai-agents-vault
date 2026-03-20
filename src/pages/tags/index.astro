@@ -1,0 +1,99 @@
+---
+/**
+ * tags/index.astro
+ * Lists all tags in the vault.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const allNotes = await getCollection('vault');
+const tagCounts = new Map<string, number>();
+allNotes.forEach(note => {
+  note.data.tags?.forEach((t: string) => {
+    tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+  });
+});
+
+const sortedTags = Array.from(tagCounts.entries()).sort((a, b) => b[1] - a[1]);
+const base = import.meta.env.BASE_URL;
+---
+
+<BaseLayout title="Tags">
+  <div class="tags-page">
+    <header class="tags-header">
+      <a href={base} class="back-link">&larr; Inicio</a>
+      <h1>Tags</h1>
+      <p class="tag-total">{sortedTags.length} tags</p>
+    </header>
+    <div class="tags-cloud">
+      {sortedTags.map(([tag, count]) => (
+        <a href={`${base}tags/${tag}/`} class="tag-item">
+          <span class="tag-name">#{tag}</span>
+          <span class="tag-count">{count}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .tags-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    font-family: var(--font-ui);
+  }
+
+  .back-link {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .back-link:hover { color: var(--link-color); }
+
+  .tags-page h1 {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    margin: 0.5rem 0 0.25rem;
+  }
+
+  .tag-total {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+
+  .tags-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    text-decoration: none;
+    transition: border-color 200ms ease;
+  }
+
+  .tag-item:hover { border-color: var(--link-color); }
+
+  .tag-name {
+    color: var(--text-main);
+    font-size: 0.8rem;
+  }
+
+  .tag-count {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    background: var(--bg-sidebar);
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+  }
+</style>

@@ -1,0 +1,139 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ANIMATIONS — Transitions, hover effects, microinteractions
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Theme transition on major containers ──────────────────────── */
+body,
+.sidebar-left,
+.sidebar-right,
+.mobile-header,
+.fm-dashboard,
+.callout,
+details.callout {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+/* ─── Link hover effects ────────────────────────────────────────── */
+a {
+  transition: color 200ms ease;
+}
+
+/* ─── Card hover lift ───────────────────────────────────────────── */
+.area-card,
+.note-card {
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.area-card:hover,
+.note-card:hover {
+  transform: translateY(-1px);
+}
+
+/* ─── Sidebar folder expand ─────────────────────────────────────── */
+.folder-contents {
+  animation: folder-expand 200ms ease;
+}
+
+@keyframes folder-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Search modal entrance ─────────────────────────────────────── */
+.search-overlay.open .search-modal {
+  animation: modal-in 200ms ease;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ─── Callout foldable chevron ──────────────────────────────────── */
+.callout-chevron {
+  transition: transform 200ms ease;
+}
+
+/* ─── Frontmatter dashboard fade-in ─────────────────────────────── */
+.fm-dashboard {
+  animation: fade-in 300ms ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Table of Contents active highlight ────────────────────────── */
+.toc-link {
+  transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+
+.toc-link.active {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+html.dark .toc-link.active {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+/* ─── Tag pill hover ────────────────────────────────────────────── */
+.tag-pill,
+.fm-tag {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+/* ─── Wikilink hover glow ───────────────────────────────────────── */
+.wikilink {
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.wikilink:hover {
+  box-shadow: 0 1px 4px rgba(67, 56, 202, 0.1);
+}
+
+html.dark .wikilink:hover {
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.15);
+}
+
+/* ─── Code copy button ──────────────────────────────────────────── */
+.code-copy-btn {
+  transition: opacity 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+
+/* ─── Image lazy load fade ──────────────────────────────────────── */
+.prose img {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.prose img[loading="lazy"] {
+  opacity: 0;
+}
+
+.prose img.loaded {
+  opacity: 1;
+}
+
+/* ─── Reduce motion for a11y ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
