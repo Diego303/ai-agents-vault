@@ -18,7 +18,7 @@ const base = import.meta.env.BASE_URL;
 // Build breadcrumb trail from folder path
 const parts = currentSlug.split('/');
 const crumbs: { label: string; href: string }[] = [
-  { label: 'Inicio', href: base },
+  { label: 'Inicio', href: `${base}docs/` },
 ];
 
 // Add folder breadcrumbs

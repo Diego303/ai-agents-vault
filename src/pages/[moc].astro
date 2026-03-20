@@ -101,7 +101,7 @@ const cards: CardData[] = notes.map((note: any) => {
       <div class="moc-content">
         <div class="moc-header-bar">
           <div>
-            <a href={base} class="moc-back">&larr; Inicio</a>
+            <a href={`${base}docs/`} class="moc-back">&larr; Inicio</a>
             <h1 class="moc-title">{moc.title}</h1>
             <p class="moc-description">{moc.description}</p>
             <p class="moc-count">{cards.length} notas</p>
@@ -153,7 +153,7 @@ const cards: CardData[] = notes.map((note: any) => {
 </BaseLayout>
 
 <style>
-  .moc-layout { display: flex; min-height: 100vh; }
+  .moc-layout { display: flex; height: 100vh; overflow: hidden; }
 
   .moc-sidebar {
     width: var(--sidebar-width); flex-shrink: 0; height: 100vh;
@@ -232,6 +232,15 @@ const cards: CardData[] = notes.map((note: any) => {
   .note-card-tag { font-family: var(--font-ui); font-size: 0.65rem; color: var(--text-muted); }
 
   .moc-empty { text-align: center; padding: 3rem; color: var(--text-muted); font-family: var(--font-ui); }
+
+  @media (max-width: 600px) {
+    .moc-content { padding: 1.25rem 1rem 3rem; }
+    .moc-title { font-size: 1.5rem; }
+    .moc-description { font-size: 0.85rem; }
+    .note-card { padding: 0.75rem 0.9rem; }
+    .note-card-title { font-size: 0.85rem; }
+    .note-card-preview { font-size: 0.78rem; }
+  }
 
   @media (min-width: 640px) { .note-cards { grid-template-columns: repeat(2, 1fr); } }
 
