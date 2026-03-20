@@ -304,3 +304,56 @@ html.dark .mermaid marker path { fill: #6b7280 !important; stroke: none !importa
 html.dark .katex {
   color: var(--text-main);
 }
+
+/* ─── KaTeX overflow on mobile ──────────────────────────────────── */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Mobile responsive (≤ 600px) ──────────────────────────────── */
+@media (max-width: 600px) {
+  .prose p {
+    line-height: 1.7;
+  }
+
+  .prose pre {
+    font-size: 0.8rem;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0.375rem;
+  }
+
+  .prose th,
+  .prose td {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .prose ul,
+  .prose ol {
+    padding-left: 1.15rem;
+  }
+
+  .prose blockquote:not(.callout) {
+    padding: 0.35rem 0.75rem;
+  }
+
+  .prose hr {
+    margin: 1.5rem 0;
+  }
+
+  .wikilink {
+    font-size: 0.85em;
+    padding: 0.05rem 0.25rem;
+  }
+
+  .embed-ref {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .prose img {
+    margin: 1rem auto;
+  }
+}
