@@ -1,0 +1,327 @@
+---
+/**
+ * SearchModal.astro
+ * Global search modal triggered by ⌘K / Ctrl+K.
+ * Loads a pre-built JSON index and does client-side filtering.
+ */
+---
+
+<div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="Buscar notas">
+  <div class="search-modal">
+    <div class="search-input-wrapper">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="Buscar notas..."
+        autocomplete="off"
+        autofocus
+      />
+      <kbd class="search-esc">Esc</kbd>
+    </div>
+    <div class="search-results" id="search-results">
+      <div class="search-empty">Escribe para buscar en el vault</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .search-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 15vh;
+  }
+
+  .search-overlay.open {
+    display: flex;
+  }
+
+  .search-modal {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 600px;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+  }
+
+  html.dark .search-modal {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    background: none;
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    color: var(--text-main);
+    outline: none;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .search-esc {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.2rem;
+    color: var(--text-muted);
+    background: var(--bg-main);
+  }
+
+  .search-results {
+    overflow-y: auto;
+    padding: 0.5rem;
+    flex: 1;
+  }
+
+  .search-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+  }
+
+  .search-result-item {
+    display: block;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    transition: background-color 150ms ease;
+    margin-bottom: 0.15rem;
+  }
+
+  .search-result-item:hover,
+  .search-result-item.selected {
+    background: var(--sidebar-hover);
+  }
+
+  .search-result-title {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-main);
+    display: block;
+  }
+
+  .search-result-meta {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+  }
+
+  .search-result-tag {
+    color: var(--link-color);
+  }
+
+  .search-highlight {
+    background: var(--highlight-bg);
+    color: var(--highlight-text);
+    border-radius: 0.125rem;
+    padding: 0 0.1rem;
+  }
+
+  .search-no-results {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+  }
+</style>
+
+<script>
+  interface SearchEntry {
+    slug: string;
+    title: string;
+    tags: string[];
+    folder: string;
+    excerpt: string;
+  }
+
+  let searchIndex: SearchEntry[] | null = null;
+  let selectedIndex = -1;
+
+  const overlay = document.getElementById('search-overlay')!;
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const results = document.getElementById('search-results')!;
+
+  // Also bind sidebar search trigger
+  const sidebarTrigger = document.getElementById('search-trigger');
+
+  async function loadIndex(): Promise<SearchEntry[]> {
+    if (searchIndex) return searchIndex;
+    try {
+      const base = import.meta.env.BASE_URL || '/';
+      const res = await fetch(`${base}search-index.json`);
+      searchIndex = await res.json();
+      return searchIndex!;
+    } catch {
+      searchIndex = [];
+      return [];
+    }
+  }
+
+  function openSearch() {
+    overlay.classList.add('open');
+    input.value = '';
+    input.focus();
+    selectedIndex = -1;
+    results.innerHTML = '<div class="search-empty">Escribe para buscar en el vault</div>';
+  }
+
+  function closeSearch() {
+    overlay.classList.remove('open');
+    selectedIndex = -1;
+  }
+
+  function escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function highlightMatch(text: string, query: string): string {
+    if (!query) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escaped.replace(re, '<span class="search-highlight">$1</span>');
+  }
+
+  async function doSearch(query: string) {
+    const index = await loadIndex();
+    if (!query.trim()) {
+      results.innerHTML = '<div class="search-empty">Escribe para buscar en el vault</div>';
+      selectedIndex = -1;
+      return;
+    }
+
+    const q = query.toLowerCase();
+    const scored = index
+      .map(entry => {
+        let score = 0;
+        const titleLower = entry.title.toLowerCase();
+        if (titleLower === q) score += 100;
+        else if (titleLower.startsWith(q)) score += 50;
+        else if (titleLower.includes(q)) score += 25;
+
+        for (const tag of entry.tags) {
+          if (tag.toLowerCase().includes(q)) score += 15;
+        }
+
+        if (entry.excerpt.toLowerCase().includes(q)) score += 5;
+
+        return { entry, score };
+      })
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+
+    if (scored.length === 0) {
+      results.innerHTML = '<div class="search-no-results">Sin resultados</div>';
+      selectedIndex = -1;
+      return;
+    }
+
+    const base = import.meta.env.BASE_URL || '/';
+    results.innerHTML = scored
+      .map(({ entry }, i) => {
+        const href = `${base}${entry.slug}/`;
+        const tags = entry.tags.slice(0, 3).map(t => `<span class="search-result-tag">#${escapeHtml(t)}</span>`).join(' ');
+        return `<a href="${href}" class="search-result-item${i === 0 ? ' selected' : ''}" data-index="${i}">
+          <span class="search-result-title">${highlightMatch(entry.title, query)}</span>
+          <span class="search-result-meta">
+            <span>${escapeHtml(entry.folder)}</span>
+            ${tags}
+          </span>
+        </a>`;
+      })
+      .join('');
+
+    selectedIndex = 0;
+  }
+
+  function updateSelection() {
+    const items = results.querySelectorAll('.search-result-item');
+    items.forEach((el, i) => {
+      el.classList.toggle('selected', i === selectedIndex);
+      if (i === selectedIndex) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    });
+  }
+
+  // Keyboard shortcut: ⌘K / Ctrl+K
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      if (overlay.classList.contains('open')) {
+        closeSearch();
+      } else {
+        openSearch();
+      }
+    }
+
+    if (!overlay.classList.contains('open')) return;
+
+    if (e.key === 'Escape') {
+      closeSearch();
+      return;
+    }
+
+    const items = results.querySelectorAll('.search-result-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+      updateSelection();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, 0);
+      updateSelection();
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault();
+      const selected = items[selectedIndex] as HTMLAnchorElement;
+      if (selected) window.location.href = selected.href;
+    }
+  });
+
+  // Click overlay to close
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSearch();
+  });
+
+  // Search on input
+  input.addEventListener('input', () => doSearch(input.value));
+
+  // Sidebar search trigger
+  sidebarTrigger?.addEventListener('click', openSearch);
+</script>

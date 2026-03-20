@@ -1,0 +1,259 @@
+---
+/**
+ * FrontmatterDashboard.astro
+ * Renders frontmatter as a visual dashboard grid (not raw YAML).
+ */
+import { normalizeStatus, normalizeDifficulty, parseRelated } from '../../utils/frontmatter';
+import { resolveWikilink } from '../../utils/vault-loader';
+
+interface Props {
+  frontmatter: Record<string, any>;
+}
+
+const { frontmatter } = Astro.props;
+const base = import.meta.env.BASE_URL;
+
+const tags: string[] = frontmatter.tags || [];
+const aliases: string[] = frontmatter.aliases || [];
+const status = normalizeStatus(frontmatter.status);
+const difficulty = normalizeDifficulty(frontmatter.difficulty);
+const related = parseRelated(frontmatter.related);
+const created = frontmatter.created;
+const updated = frontmatter.updated;
+const category = frontmatter.category;
+
+// Check if there's meaningful data to show
+const hasData = tags.length > 0 || aliases.length > 0 || status || difficulty || created;
+---
+
+{hasData && (
+  <div class="fm-dashboard">
+    <div class="fm-grid">
+      {/* Tags */}
+      {tags.length > 0 && (
+        <div class="fm-field">
+          <span class="fm-label">Tags</span>
+          <div class="fm-value fm-tags">
+            {tags.map(tag => (
+              <a href={`${base}tags/${tag}/`} class="fm-tag">#{tag}</a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Status & Difficulty */}
+      {(status || difficulty) && (
+        <div class="fm-field">
+          <span class="fm-label">Status</span>
+          <div class="fm-value fm-badges">
+            {status && (
+              <span class={`fm-status fm-status-${status.color}`}>
+                <span class={`status-dot ${status.filled ? 'filled' : 'empty'}`}></span>
+                {status.label}
+              </span>
+            )}
+            {difficulty && (
+              <span class={`fm-difficulty fm-difficulty-${difficulty.color}`}>
+                {difficulty.label}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Aliases */}
+      {aliases.length > 0 && (
+        <div class="fm-field">
+          <span class="fm-label">Aliases</span>
+          <div class="fm-value">{aliases.join(', ')}</div>
+        </div>
+      )}
+
+      {/* Category */}
+      {category && (
+        <div class="fm-field">
+          <span class="fm-label">Categoría</span>
+          <div class="fm-value">{category}</div>
+        </div>
+      )}
+
+      {/* Dates */}
+      {(created || updated) && (
+        <div class="fm-field">
+          <span class="fm-label">Fechas</span>
+          <div class="fm-value fm-dates">
+            {created && <span>Creado: {created}</span>}
+            {updated && <span>Actualizado: {updated}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Related */}
+      {related.length > 0 && (
+        <div class="fm-field fm-field-wide">
+          <span class="fm-label">Relacionadas</span>
+          <div class="fm-value fm-related">
+            {related.map(r => {
+              const parts = r.split('#');
+              const target = parts[0];
+              const resolved = resolveWikilink(target);
+              const href = resolved ? `${base}${resolved.slug}/` : '#';
+              const broken = !resolved;
+              return (
+                <a
+                  href={href}
+                  class:list={['wikilink', { 'wikilink-broken': broken }]}
+                >
+                  {target}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+<style>
+  .fm-dashboard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    font-family: var(--font-ui);
+  }
+
+  .fm-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 480px) {
+    .fm-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .fm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .fm-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .fm-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .fm-value {
+    font-size: 0.85rem;
+    color: var(--text-main);
+  }
+
+  /* Tags */
+  .fm-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .fm-tag {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: background-color 200ms ease;
+  }
+
+  .fm-tag:hover {
+    background: var(--sidebar-hover);
+    color: var(--text-main);
+  }
+
+  /* Status badges */
+  .fm-badges {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .fm-status {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .status-dot.filled {
+    background: currentColor;
+  }
+
+  .status-dot.empty {
+    border: 1.5px solid currentColor;
+    background: transparent;
+  }
+
+  .fm-status-green { color: #15803d; }
+  .fm-status-blue { color: #1d4ed8; }
+  .fm-status-orange { color: #c45100; }
+  .fm-status-red { color: #b91c1c; }
+  .fm-status-gray { color: #6b7280; }
+
+  html.dark .fm-status-green { color: #4ade80; }
+  html.dark .fm-status-blue { color: #60a5fa; }
+  html.dark .fm-status-orange { color: #fb923c; }
+  html.dark .fm-status-red { color: #f87171; }
+  html.dark .fm-status-gray { color: #9ca3af; }
+
+  /* Difficulty */
+  .fm-difficulty {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .fm-difficulty-green { color: #15803d; }
+  .fm-difficulty-blue { color: #1d4ed8; }
+  .fm-difficulty-orange { color: #c45100; }
+  .fm-difficulty-red { color: #b91c1c; }
+
+  html.dark .fm-difficulty-green { color: #4ade80; }
+  html.dark .fm-difficulty-blue { color: #60a5fa; }
+  html.dark .fm-difficulty-orange { color: #fb923c; }
+  html.dark .fm-difficulty-red { color: #f87171; }
+
+  /* Dates */
+  .fm-dates {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* Related */
+  .fm-related {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+</style>

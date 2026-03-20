@@ -1,0 +1,328 @@
+---
+/**
+ * NoteLayout.astro
+ * Three-column layout for individual notes:
+ * Left sidebar (nav) | Content | Right sidebar (ToC + backlinks)
+ */
+import BaseLayout from './BaseLayout.astro';
+import Sidebar from '../components/layout/Sidebar.astro';
+import TableOfContents from '../components/layout/TableOfContents.astro';
+import Backlinks from '../components/layout/Backlinks.astro';
+import Breadcrumbs from '../components/layout/Breadcrumbs.astro';
+import ThemeToggle from '../components/interactive/ThemeToggle.astro';
+import FrontmatterDashboard from '../components/content/FrontmatterDashboard.astro';
+import SearchModal from '../components/search/SearchModal.astro';
+import CodeCopyButton from '../components/interactive/CodeCopyButton.astro';
+import MermaidInit from '../components/interactive/MermaidInit.astro';
+import { getCollection } from 'astro:content';
+import { computeBacklinks, getBacklinksForNote } from '../utils/backlinks';
+import type { BacklinkEntry } from '../utils/backlinks';
+
+interface Props {
+  title: string;
+  description?: string;
+  frontmatter: Record<string, any>;
+  headings: { depth: number; slug: string; text: string }[];
+  currentSlug: string;
+}
+
+const { title, description, frontmatter, headings, currentSlug } = Astro.props;
+
+// Compute backlinks
+const allNotes = await getCollection('vault');
+const backlinksMap = computeBacklinks(allNotes);
+const backlinks: BacklinkEntry[] = getBacklinksForNote(backlinksMap, currentSlug);
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="site-layout">
+    <!-- Mobile header -->
+    <header class="mobile-header">
+      <button class="hamburger-btn" id="sidebar-toggle" aria-label="Abrir menú">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <span class="mobile-title">{title}</span>
+      <div class="mobile-actions">
+        <ThemeToggle />
+      </div>
+    </header>
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar-left" id="sidebar-left">
+      <Sidebar currentSlug={currentSlug} />
+    </aside>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main content -->
+    <main class="main-content" id="main-scroll">
+      <div class="content-wrapper">
+        <article class="article-content prose">
+          <!-- Desktop header with theme toggle -->
+          <div class="desktop-header">
+            <Breadcrumbs frontmatter={frontmatter} currentTitle={title} currentSlug={currentSlug} />
+            <ThemeToggle />
+          </div>
+
+          <!-- Note title -->
+          <h1>{title}</h1>
+
+          <!-- Frontmatter dashboard -->
+          <FrontmatterDashboard frontmatter={frontmatter} />
+
+          <!-- Mobile ToC (visible only on smaller screens) -->
+          {headings.filter(h => h.depth >= 2 && h.depth <= 3).length > 0 && (
+            <details class="mobile-toc">
+              <summary class="mobile-toc-trigger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                Tabla de contenidos
+              </summary>
+              <nav class="mobile-toc-list">
+                {headings.filter(h => h.depth >= 2 && h.depth <= 3).map(h => (
+                  <a href={`#${h.slug}`} class:list={['mobile-toc-link', { 'indent': h.depth === 3 }]}>
+                    {h.text}
+                  </a>
+                ))}
+              </nav>
+            </details>
+          )}
+
+          <!-- Rendered markdown content -->
+          <slot />
+        </article>
+      </div>
+    </main>
+
+    <!-- Right Sidebar (ToC + Backlinks) -->
+    <aside class="sidebar-right">
+      <TableOfContents headings={headings} />
+      <Backlinks backlinks={backlinks} />
+    </aside>
+
+    <!-- Search modal -->
+    <SearchModal />
+
+    <!-- Interactive islands -->
+    <CodeCopyButton />
+    <MermaidInit />
+  </div>
+</BaseLayout>
+
+<style>
+  .site-layout {
+    display: flex;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── Mobile header ──────────────────────────────────────────── */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-main);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+  }
+
+  .hamburger-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+  }
+
+  .mobile-title {
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60%;
+  }
+
+  .mobile-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* ─── Left sidebar ───────────────────────────────────────────── */
+  .sidebar-left {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 300ms ease;
+  }
+
+  .sidebar-left.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 35;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  /* ─── Main content ───────────────────────────────────────────── */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    height: 100vh;
+    padding-top: 3.5rem; /* mobile header height */
+  }
+
+  .content-wrapper {
+    max-width: calc(var(--content-max-width) + 3rem);
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+  }
+
+  .desktop-header {
+    display: none;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  /* ─── Right sidebar ──────────────────────────────────────────── */
+  .sidebar-right {
+    display: none;
+  }
+
+  /* ─── Mobile ToC ─────────────────────────────────────────────── */
+  .mobile-toc {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-family: var(--font-ui);
+  }
+
+  .mobile-toc-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mobile-toc-trigger::-webkit-details-marker { display: none; }
+  .mobile-toc-trigger::marker { display: none; content: ''; }
+
+  .mobile-toc-list {
+    padding: 0 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .mobile-toc-link {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 0.2rem;
+    transition: color 150ms ease;
+  }
+
+  .mobile-toc-link:hover { color: var(--link-color); }
+  .mobile-toc-link.indent { padding-left: 1.25rem; }
+
+  /* ─── Desktop (md: 768px) ────────────────────────────────────── */
+  @media (min-width: 768px) {
+    .mobile-header {
+      display: none;
+    }
+
+    .sidebar-left {
+      transform: translateX(0);
+      position: sticky;
+      top: 0;
+    }
+
+    .main-content {
+      padding-top: 0;
+    }
+
+    .content-wrapper {
+      padding: 3rem 2rem;
+    }
+
+    .desktop-header {
+      display: flex;
+    }
+  }
+
+  /* ─── Large desktop (xl: 1280px) ─────────────────────────────── */
+  @media (min-width: 1280px) {
+    .sidebar-right {
+      display: block;
+      width: var(--toc-width);
+      flex-shrink: 0;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+      padding: 3rem 1rem 2rem 0;
+    }
+
+    .mobile-toc {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // Mobile sidebar toggle
+  const toggle = document.getElementById('sidebar-toggle');
+  const sidebar = document.getElementById('sidebar-left');
+  const overlay = document.getElementById('sidebar-overlay');
+
+  function openSidebar() {
+    sidebar?.classList.add('open');
+    overlay?.classList.add('open');
+  }
+
+  function closeSidebar() {
+    sidebar?.classList.remove('open');
+    overlay?.classList.remove('open');
+  }
+
+  toggle?.addEventListener('click', openSidebar);
+  overlay?.addEventListener('click', closeSidebar);
+</script>

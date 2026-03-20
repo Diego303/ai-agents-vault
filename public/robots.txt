@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://Diego303.github.io/ai-agents-vault/sitemap-index.xml
